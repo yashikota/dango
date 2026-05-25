@@ -244,14 +244,19 @@ func decodeRecurrence(data string) (*Recurrence, error) {
 	return &recurrence, nil
 }
 
+const timeFormat = "2006-01-02T15:04:05.000000000Z"
+
 func formatTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339Nano)
+	return t.UTC().Format(timeFormat)
 }
 
 func parseStoredTime(value string) (time.Time, error) {
-	t, err := time.Parse(time.RFC3339Nano, value)
+	t, err := time.Parse(timeFormat, value)
 	if err != nil {
-		return time.Time{}, err
+		t, err = time.Parse(time.RFC3339Nano, value)
+		if err != nil {
+			return time.Time{}, err
+		}
 	}
 	return t.UTC(), nil
 }
