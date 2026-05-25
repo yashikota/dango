@@ -92,6 +92,12 @@ func TestParseSupportedSyntax(t *testing.T) {
 			wantMsg:  "meeting",
 			wantTime: time.Date(2026, 6, 1, 10, 0, 0, 0, loc),
 		},
+		{
+			name:     "japanese word starting with particle char preserved",
+			input:    "明日9時ににんじん買う",
+			wantMsg:  "にんじん買う",
+			wantTime: time.Date(2026, 5, 26, 9, 0, 0, 0, loc),
+		},
 	}
 
 	for _, tt := range tests {

@@ -138,6 +138,11 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 func (b *Bot) handleRandom(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	b.deferResponse(s, i, false)
 
+	if i.GuildID == "" {
+		b.followup(s, i, "⚠️ 抽選機能はサーバー内で実行してください", false)
+		return
+	}
+
 	input := stringOption(i, "mentions")
 	content, err := random.Handle(s, i.GuildID, s.State.User.ID, input)
 	if err != nil {
@@ -221,13 +226,14 @@ func (b *Bot) handleRemindCancel(s *discordgo.Session, i *discordgo.InteractionC
 	b.followup(s, i, fmt.Sprintf("リマインダー `%d` をキャンセルしました", id), true)
 }
 
-func (b *Bot) SendReminder(_ context.Context, rem reminder.Reminder) error {
+func (b *Bot) SendReminder(ctx context.Context, rem reminder.Reminder) error {
 	content := reminder.FormatReminderMessage(rem)
+	withCtx := discordgo.WithContext(ctx)
 	switch rem.Target {
 	case reminder.TargetMe:
-		channel, err := b.session.UserChannelCreate(rem.CreatorUserID)
+		channel, err := b.session.UserChannelCreate(rem.CreatorUserID, withCtx)
 		if err == nil {
-			if _, sendErr := b.session.ChannelMessageSend(channel.ID, content); sendErr == nil {
+			if _, sendErr := b.session.ChannelMessageSend(channel.ID, content, withCtx); sendErr == nil {
 				return nil
 			} else {
 				err = sendErr
@@ -235,12 +241,12 @@ func (b *Bot) SendReminder(_ context.Context, rem reminder.Reminder) error {
 		}
 
 		fallback := fmt.Sprintf("<@%s>\n%s", rem.CreatorUserID, content)
-		if _, fallbackErr := b.session.ChannelMessageSend(rem.ChannelID, fallback); fallbackErr != nil {
+		if _, fallbackErr := b.session.ChannelMessageSend(rem.ChannelID, fallback, withCtx); fallbackErr != nil {
 			return fmt.Errorf("send DM failed: %v; fallback failed: %w", err, fallbackErr)
 		}
 		return nil
 	case reminder.TargetChannel:
-		_, err := b.session.ChannelMessageSend(rem.ChannelID, content)
+		_, err := b.session.ChannelMessageSend(rem.ChannelID, content, withCtx)
 		return err
 	default:
 		return fmt.Errorf("unknown reminder target %q", rem.Target)

@@ -391,26 +391,44 @@ func weekdayFromText(text string) (time.Weekday, bool) {
 }
 
 func cleanupMessage(input string, start, end int) string {
-	message := strings.TrimSpace(input[:start] + " " + input[end:])
-	message = strings.Trim(message, " \t\r\n　,，.。")
-	message = spacesRe.ReplaceAllString(message, " ")
-	message = strings.TrimSpace(message)
+	before := strings.TrimSpace(input[:start])
+	after := strings.TrimSpace(input[end:])
 
-	for {
-		before := message
-		message = strings.TrimPrefix(message, "に")
-		message = strings.TrimPrefix(message, "を")
-		message = strings.TrimPrefix(message, "to ")
-		message = strings.TrimPrefix(message, "at ")
-		message = strings.TrimSpace(message)
-		message = strings.TrimSuffix(message, "に")
-		message = strings.TrimSuffix(message, "を")
-		message = strings.TrimSuffix(message, " at")
-		message = strings.TrimSuffix(message, " on")
-		message = strings.Trim(message, " \t\r\n　,，.。")
-		if message == before {
-			break
+	before = strings.TrimRight(before, " \t\r\n　,，.。")
+	after = strings.TrimLeft(after, " \t\r\n　,，.。")
+
+	before = trimTrailingParticle(before)
+	after = trimLeadingParticle(after)
+
+	message := strings.TrimSpace(before + " " + after)
+	message = spacesRe.ReplaceAllString(message, " ")
+	message = strings.Trim(message, " \t\r\n　,，.。")
+	return message
+}
+
+func trimTrailingParticle(s string) string {
+	for _, p := range []string{"に", "を", " at", " on"} {
+		s = strings.TrimSuffix(s, p)
+	}
+	return strings.TrimRight(s, " \t\r\n　")
+}
+
+func trimLeadingParticle(s string) string {
+	for _, p := range []string{"to ", "at "} {
+		s = strings.TrimPrefix(s, p)
+	}
+	for _, p := range []string{"に", "を"} {
+		after := strings.TrimPrefix(s, p)
+		if after != s && !startsWithHiragana(after) {
+			s = after
 		}
 	}
-	return message
+	return strings.TrimLeft(s, " \t\r\n　")
+}
+
+func startsWithHiragana(s string) bool {
+	for _, r := range s {
+		return r >= 'ぁ' && r <= 'ゖ'
+	}
+	return false
 }

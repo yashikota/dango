@@ -15,7 +15,7 @@ type Repository struct {
 }
 
 func OpenRepository(path string) (*Repository, error) {
-	db, err := sql.Open("sqlite3", path+"?_busy_timeout=5000&_foreign_keys=on")
+	db, err := sql.Open("sqlite3", path+"?_busy_timeout=5000&_foreign_keys=on&_journal_mode=WAL")
 	if err != nil {
 		return nil, err
 	}

@@ -59,20 +59,25 @@ func (s *Scheduler) Tick(ctx context.Context) error {
 	for _, rem := range due {
 		if err := s.sender.SendReminder(ctx, rem); err != nil {
 			log.Printf("send reminder %d failed: %v", rem.ID, err)
+			backoff := s.now().UTC().Add(5 * time.Minute)
+			if err := s.repo.Reschedule(ctx, rem.ID, backoff); err != nil {
+				log.Printf("backoff reschedule reminder %d failed: %v", rem.ID, err)
+			}
 			continue
 		}
 		if rem.Recurrence == nil {
 			if err := s.repo.MarkCompleted(ctx, rem.ID); err != nil {
-				return fmt.Errorf("mark reminder %d completed: %w", rem.ID, err)
+				log.Printf("mark reminder %d completed failed: %v", rem.ID, err)
 			}
 			continue
 		}
 		next, err := rem.Recurrence.NextAfter(s.now())
 		if err != nil {
-			return fmt.Errorf("compute next recurrence for reminder %d: %w", rem.ID, err)
+			log.Printf("compute next recurrence for reminder %d failed: %v", rem.ID, err)
+			continue
 		}
 		if err := s.repo.Reschedule(ctx, rem.ID, next.UTC()); err != nil {
-			return fmt.Errorf("reschedule reminder %d: %w", rem.ID, err)
+			log.Printf("reschedule reminder %d failed: %v", rem.ID, err)
 		}
 	}
 	return nil
